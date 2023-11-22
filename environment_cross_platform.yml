@@ -1,0 +1,16 @@
+name: base
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - conda==23.10.0
+  - setuptools
+  - pip
+  - wheel
+  - conda-content-trust
+  - conda-libmamba-solver
+  - pytorch
+  - pytorch-cuda=11.8
+  - torchvision
+  - lightning
+prefix: /ext3/miniconda3
