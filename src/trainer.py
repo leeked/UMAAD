@@ -11,8 +11,6 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from pytorch_lightning import Trainer, seed_everything
-from pytorch_lightning.callbacks import ModelCheckpoint
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
@@ -26,7 +24,12 @@ parser.add_argument('--no_pix_norm', action='store_false', help='No pixel normal
 args = parser.parse_args()
 
 SEED = args.seed
-seed_everything(SEED, workers=True)
+
+# set flags / seeds
+torch.backends.cudnn.benchmark = True
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
 
 BATCH_SIZE = args.batch_size
 NUM_EPOCHS = args.num_epochs
@@ -44,66 +47,26 @@ print(f'Pixel normalization: {PIX_NORM}')
 print(f'= ' * 30)
 
 def main():
-    # Set up the datasets
-    dataset = _placeholder_dataset_(batch_size=BATCH_SIZE, num_workers=8)
+    # Datasets
+    ...
 
-    # Set up the model
-    model = _placeholder_model_(
-        lr=LR, 
-        ratio=RATIO,
-        num_heads=16,
-        depth=24,
-        dec_num_heads=16,
-        dec_depth=8,
-        pix_norm=PIX_NORM,
-    )
-    print(model)
+    # Instantiate model
+    ...
 
-    root_dir = f'model_logs/window/config-{RATIO}-{LR}-{BATCH_SIZE}-{NUM_EPOCHS}-{PIX_NORM}/SEED-{SEED}'
-    
-    # Set up the trainer
-    trainer = Trainer(
-        default_root_dir=root_dir + '/checkpoints',
-        accelerator='gpu',
-        devices=1,
-        max_epochs=NUM_EPOCHS,
-        deterministic=True,
-        callbacks=[
-            ModelCheckpoint(
-                monitor='validation_epoch_average',
-                filename='{SEED}-{epoch:02d}-{validation_epoch_average:.4f}',
-                save_top_k=1,
-                mode='min',
-            ),
-        ],
-#            gradient_clip_val=0.5,
-#            gradient_clip_algorithm='norm',
-        log_every_n_steps=10,
-    )
-    
+    # Criterion and optimizers
+    ...
+
+    # If CUDA, move to CUDA
+    ...
+
     # Train the model
-    start = time.time()
-    trainer.fit(model, dataset)
-    end = time.time()
-    print(f'Training time in {(end - start) / 60:.0f} minutes and {(end - start) % 60:.0f} seconds')
+    ...
 
-    if model.global_rank != 0:
-        sys.exit(0)
+    # Save the model
+    ...
 
-    best_model_path = trainer.checkpoint_callback.best_model_path
-    
-    print(f"best_model_path: {best_model_path}")
-
-    # Test the model
-    model = _placeholder_model_.load_from_checkpoint(best_model_path).cuda()
-    model.eval()
-    model.freeze()
-
-    print(f'Eval on Test Data')
-    test_dir = './data/.../test/'
-    with torch.no_grad():
-        for scan in tqdm(os.listdir(test_dir)):
-            pass
+    # Evaluate the model
+    ...
 
 if __name__ == "__main__":
     main()
