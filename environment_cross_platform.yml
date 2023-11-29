@@ -13,4 +13,5 @@ dependencies:
   - pytorch-cuda=11.8
   - torchvision
   - lightning
+  - matplotlib
 prefix: /ext3/miniconda3
