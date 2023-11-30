@@ -66,13 +66,16 @@ def main():
 
 
     # Instantiate model
-    chkpt_dir = 'src/checkpoints/mae_finetune_vit_large.pth'
+    chkpt_dir = 'src/checkpoints/mae_visualize_vit_large.pth'
     model = prepare_model(chkpt_dir, 'mae_vit_large_patch16')
     print('Model loaded.')
 
     # Criterion and optimizers
+    # param_groups = lrd.param_groups_lrd(model, weight_decay=0.05,
+    #     no_weight_decay_list=model.no_weight_decay(),
+    #     layer_decay=0.75
+    # )
     param_groups = lrd.param_groups_lrd(model, weight_decay=0.05,
-        no_weight_decay_list=model.no_weight_decay(),
         layer_decay=0.75
     )
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr)
