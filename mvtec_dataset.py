@@ -112,17 +112,20 @@ class MVTecDataset(VisionDataset):
         mask = self.masks[index]
         label = self.labels[index]
 
+        pil_img = self.load_image(img)
+        pil_mask = self.load_image(mask, mode="L")
+
         # apply transforms
         if self.transforms:
-            img = self.transforms(img)
+            pil_img = self.transforms(pil_img)
         
         if self.mask_transforms:
-            mask = self.mask_transforms(mask)
+            pil_mask = self.mask_transforms(pil_mask)
         
         if self.target_transforms:
             label = self.target_transforms(label)
 
-        return img, mask, label
+        return pil_img, pil_mask, label
         
     def __len__(self):
         return len(self.images)
@@ -131,13 +134,10 @@ class MVTecDataset(VisionDataset):
         # if path is None, return black image (no anomaly)
         if path ==  None:
             img = Image.new(mode, (self.image_size, self.image_size))
-            return transforms.ToTensor()(img)
+            return img
 
         # otherwise, load image and resize
         img = Image.open(path).convert(mode)
-        img = img.resize((self.image_size, self.image_size))
-
-        img = transforms.ToTensor()(img)
 
         return img
 
@@ -152,7 +152,7 @@ class MVTecDataset(VisionDataset):
         masks = []
         labels = []
         for obj in self.objects_to_add:
-            #print("Loading {} images...".format(obj))
+            print("Loading {} images...".format(obj))
             # directory of images based on training flag
             self.data_dir = os.path.join(self.root, obj, self.train_dir if self.training else self.test_dir)
             self.classes =  [d.name for d in os.scandir(self.data_dir) if d.is_dir()]
@@ -160,27 +160,27 @@ class MVTecDataset(VisionDataset):
             for c in self.classes:
                 img_dir = os.path.join(self.data_dir, c)
                 # find all png files in directory
-                for f in os.scandir(img_dir):
-                    if f.is_file():
-                        if f.name.endswith(".png"):
+                png_files = [f for f in os.scandir(img_dir) if f.is_file() and f.name.endswith(".png")]
+                for f in png_files:
+                        # define image, mask, and label
+                        img_pth = os.path.join(img_dir, f.name)
+                        mask_pth = None if c == "good" else self.construct_mask_path(img_pth)
+                        label = 0 if c == "good" else 1
 
-                            # define image, mask, and label
-                            img_pth = os.path.join(img_dir, f.name)
-                            mask_pth = None if c == "good" else self.construct_mask_path(img_pth)
-                            label = 0 if c == "good" else 1
-
-                            # add to lists
-                            images.append(self.load_image(img_pth)) 
-                            masks.append(self.load_image(mask_pth,"L"))
-                            labels.append(label)
+                        # add to lists
+                        images.append(img_pth)
+                        masks.append(mask_pth)
+                        labels.append(label)
                             
         return images, masks, labels
 
 
 if __name__ == '__main__': 
-    
+    """
+    transform  = transforms.Compose([transforms.ToTensor(), transforms.Resize((224,224))])
+    mask_transform = transforms.Compose([transforms.ToTensor(), transforms.Resize((224,224))])
     # Testing code
-    dataset = MVTecDataset("./data", training=True)
+    dataset = MVTecDataset("./data", training=False, input_transform=transform, mask_transform=mask_transform)
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=4)
     print("Length of dataloader:", len(dataloader))
@@ -190,4 +190,4 @@ if __name__ == '__main__':
         print(image.shape)
         print(mask.shape)
         print(label)
-    
+    """
