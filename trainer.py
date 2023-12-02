@@ -126,10 +126,13 @@ def main():
     # Save the model
     torch.save(model.state_dict(), 'src/checkpoints/ours/mae_finetune_vit_large.pth')
 
+    test_dataset = mvtec.MVTecDataset('./data', training=False, input_transform=transforms)
+    test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=8, pin_memory=True)
+
     # Visualize one example
     model.eval()
     with torch.no_grad():
-        for iter_step, (samples, masks, labels) in enumerate(train_dl):
+        for iter_step, (samples, masks, labels) in enumerate(test_dl):
             samples = samples.to(device, non_blocking=True)
 
             loss, pred, mask = model(samples, ratio=RATIO)
@@ -165,10 +168,11 @@ def main():
             ax[2].set_title('Reconstructed')
             ax[3].imshow(pasted_image[0])
             ax[3].set_title('Reconstructed + Visible')
-            plt.savefig(f'sample.png')
+            plt.savefig(f'vis/sample_{iter_step}.png')
             plt.close()
 
-            break
+            if iter_step == 10:
+                break
 
 if __name__ == "__main__":
     main()
