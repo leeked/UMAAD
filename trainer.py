@@ -1,3 +1,5 @@
+# Written with some code borrowed from MAE visualization colab notebook and finetune engine
+
 import sys
 
 sys.path.append('..')
@@ -27,6 +29,7 @@ parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
 parser.add_argument('--num_epochs', type=int, default=50, help='Number of epochs')
 parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
 parser.add_argument('--accum_iter', type=int, default=1, help='Number of iterations to accumulate gradients')
+parser.add_argument('--checkpoint', type=str, default=None, help='Path to checkpoint')
 args = parser.parse_args()
 
 SEED = args.seed
@@ -63,94 +66,140 @@ def prepare_model(chkpt_dir, arch='mae_vit_large_patch16'):
     return model
 
 def main():
-    # Datasets
+    # create folder to save
+    if not os.path.exists(f'vis/seed={SEED}_ratio={RATIO}_LR={LR}_batch={BATCH_SIZE}_accum={ACCUM_ITER}'):
+        os.makedirs(f'vis/seed={SEED}_ratio={RATIO}_LR={LR}_batch={BATCH_SIZE}_accum={ACCUM_ITER}')
+
     transforms = v2.Compose([
         v2.Resize((224, 224), antialias=True),
         v2.Normalize(mean=(0.485, 0.456, 0.406), 
             std=(0.229, 0.224, 0.225))
     ])
-    train_dataset = mvtec.MVTecDataset('./data', object_name='pill', training=True, input_transform=transforms)
 
-    train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, pin_memory=True)
+    # Skip training if checkpoint is provided
+    if args.checkpoint is not None:
+        # Load model from checkpoint
+        print('Loading model from checkpoint...')
+        model = models_mae.mae_vit_large_patch16()
+        checkpoint = torch.load(args.checkpoint, map_location='cpu')
+        model.load_state_dict(checkpoint)
+        print('Model loaded.')
 
-    # Instantiate model
-    chkpt_dir = 'src/checkpoints/mae_visualize_vit_large_ganloss.pth'
-    model = prepare_model(chkpt_dir, 'mae_vit_large_patch16')
-    print('Model loaded.')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = model.to(device)
+    else:
+        # Datasets
+        print('Loading datasets...')
+        train_dataset = mvtec.MVTecDataset('./data', training=True, input_transform=transforms)
 
-    # Criterion and optimizers
-    # param_groups = lrd.param_groups_lrd(model, weight_decay=0.05,
-    #     no_weight_decay_list=model.no_weight_decay(),
-    #     layer_decay=0.75
-    # )
-    param_groups = lrd.param_groups_lrd(model, weight_decay=0.05,
-        layer_decay=0.75
-    )
-    optimizer = torch.optim.AdamW(param_groups, lr=args.lr)
-    loss_scaler = NativeScaler()
+        train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=8, pin_memory=True)
 
-    criterion = torch.nn.MSELoss()
+        # Instantiate model
+        print('Instantiating model...')
+        chkpt_dir = 'src/checkpoints/mae_visualize_vit_large_ganloss.pth'
+        model = prepare_model(chkpt_dir, 'mae_vit_large_patch16')
+        print('Model loaded.')
 
-    # If CUDA, move to CUDA
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = model.to(device)
-    criterion = criterion.to(device)
+        # Criterion and optimizers
+        # param_groups = lrd.param_groups_lrd(model, weight_decay=0.05,
+        #     no_weight_decay_list=model.no_weight_decay(),
+        #     layer_decay=0.75
+        # )
+        param_groups = lrd.param_groups_lrd(model, weight_decay=0.05,
+            layer_decay=0.75
+        )
+        optimizer = torch.optim.AdamW(param_groups, lr=args.lr)
+        loss_scaler = NativeScaler()
 
-    # Train the model
-    accum_iter = ACCUM_ITER
+        criterion = torch.nn.MSELoss()
 
-    model.train(True)
-    for epoch in range(EPOCHS):
-        for iter_step, (samples, masks, labels) in enumerate(train_dl):
-            optimizer.zero_grad()
+        # If CUDA, move to CUDA
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        model = model.to(device)
+        criterion = criterion.to(device)
 
-            if iter_step % accum_iter == 0:
-                lr_sched.adjust_learning_rate(optimizer, iter_step / len(train_dl) + epoch)
-            
-            samples = samples.to(device, non_blocking=True)
+        # Train the model
+        print('Training the model...')
+        accum_iter = ACCUM_ITER
+        losses = []
+        losses_per_check = []
 
-            with torch.cuda.amp.autocast():
-                loss, pred, mask = model(samples, ratio=RATIO)
-            
-            loss_value = loss.item()
-
-            loss_scaler(loss, optimizer, clip_grad=None, parameters=model.parameters(), create_graph=False, update_grad=(iter_step + 1) % accum_iter == 0)
-            if (iter_step + 1) % accum_iter == 0:
+        start_time = time.time()
+        model.train(True)
+        for epoch in range(EPOCHS):
+            for iter_step, (samples, masks, labels) in enumerate(train_dl):
                 optimizer.zero_grad()
 
-            torch.cuda.synchronize()
+                if iter_step % accum_iter == 0:
+                    lr_sched.adjust_learning_rate(optimizer, iter_step / len(train_dl) + epoch)
+                
+                samples = samples.to(device, non_blocking=True)
 
-            if iter_step % 10 == 0:
-                print(f'Epoch [{epoch + 1}/{EPOCHS}] Iter [{iter_step + 1}/{len(train_dl)}] Loss: {loss_value}')
+                with torch.cuda.amp.autocast():
+                    loss, pred, mask = model(samples, mask_ratio=RATIO)
+                
+                loss_value = loss.item()
+                losses_per_check.append(loss_value)
 
-    # Save the model
-    torch.save(model.state_dict(), 'src/checkpoints/ours/mae_finetune_vit_large.pth')
+                loss /= accum_iter
+                loss_scaler(loss, optimizer, clip_grad=None, parameters=model.parameters(), create_graph=False, update_grad=(iter_step + 1) % accum_iter == 0)
+                if (iter_step + 1) % accum_iter == 0:
+                    optimizer.zero_grad()
 
+                torch.cuda.synchronize()
+
+                if iter_step % 10 == 0:
+                    print(f'Epoch [{epoch + 1}/{EPOCHS}] Iter [{iter_step + 1}/{len(train_dl)}] Loss: {loss_value}')
+                    losses.append(np.mean(losses_per_check))
+                    losses_per_check = []
+        print(f'Training time: {time.time() - start_time} seconds')
+
+        # Save the model
+        torch.save(model.state_dict(), f'src/checkpoints/ours/mae_seed={SEED}_ratio={RATIO}_LR={LR}_batch={BATCH_SIZE}_accum={ACCUM_ITER}.pth')
+        print('Model saved.')
+
+        # Plot the losses
+        plt.plot(losses)
+        plt.title(f'Losses for seed={SEED}, ratio={RATIO}, LR={LR}, batch={BATCH_SIZE}, accum={ACCUM_ITER}')
+        plt.xlabel('Iteration (x10)')
+        plt.ylabel('Loss')
+        plt.savefig(f'vis/seed={SEED}_ratio={RATIO}_LR={LR}_batch={BATCH_SIZE}_accum={ACCUM_ITER}/losses.png')
+        plt.close()
+
+    print('Evaluating the model...')
+    print('Loading test dataset...')
     test_dataset = mvtec.MVTecDataset('./data', training=False, input_transform=transforms)
-    test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=8, pin_memory=True)
+    test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
 
-    # Visualize one example
+    # Visualize examples
+    print('Visualizing examples...')
+
     model.eval()
     with torch.no_grad():
         for iter_step, (samples, masks, labels) in enumerate(test_dl):
+            print(f'Test image {iter_step}')
             samples = samples.to(device, non_blocking=True)
 
-            loss, pred, mask = model(samples, ratio=RATIO)
+            loss, pred, mask = model(samples, mask_ratio=RATIO)
 
             pred = model.unpatchify(pred)
-            pred = torch.einsum('nchw->nhwc', pred).detach().cpu()
+
+            samples = samples.detach().cpu()
+            # Un-normalize the images
+            samples = samples * torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+            samples = samples + torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+            samples = torch.einsum('nchw->nhwc', samples)
+
+            pred = pred.detach().cpu()
+            pred = pred * torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+            pred = pred + torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+            pred = torch.einsum('nchw->nhwc', pred)
 
             # visualize the mask
             mask = mask.detach()
             mask = mask.unsqueeze(-1).repeat(1, 1, model.patch_embed.patch_size[0]**2 *3)  # (N, H*W, p*p*3)
             mask = model.unpatchify(mask)  # 1 is removing, 0 is keeping
             mask = torch.einsum('nchw->nhwc', mask).detach().cpu()
-
-            samples = torch.einsum('nchw->nhwc', samples).detach().cpu()
-
-            print(f'pred shape: {pred.shape}')
-            print(f'mask shape: {mask.shape}')
-            print(f'samples shape: {samples.shape}')
 
             # Masked image
             masked_image = samples * (1 - mask)
@@ -168,7 +217,7 @@ def main():
             ax[2].set_title('Reconstructed')
             ax[3].imshow(pasted_image[0])
             ax[3].set_title('Reconstructed + Visible')
-            plt.savefig(f'vis/sample_{iter_step}.png')
+            plt.savefig(f'vis/seed={SEED}_ratio={RATIO}_LR={LR}_batch={BATCH_SIZE}_accum={ACCUM_ITER}/sample_{iter_step}.png')
             plt.close()
 
             if iter_step == 10:

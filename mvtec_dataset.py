@@ -75,7 +75,7 @@ class MVTecDataset(VisionDataset):
     train_dir= "train"
 
     # size to resize to
-    image_size = 256
+    image_size = 224
 
     def __init__(self, 
                  root, 

@@ -1,3 +1,5 @@
+# Taken directly from https://github.com/facebookresearch/mae/tree/main
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
