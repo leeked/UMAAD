@@ -79,7 +79,7 @@ class MVTecDataset(VisionDataset):
 
     def __init__(self, 
                  root, 
-                 object_name, 
+                 object_name = "all", 
                  training = True,
                  input_transform = None,
                  mask_transform = None,
@@ -87,18 +87,20 @@ class MVTecDataset(VisionDataset):
 
         super(MVTecDataset, self).__init__(root)
 
-        if object_name not in OBJECTS:
-            raise ValueError("Object not in dataset")
-
+        
+        if object_name == "all":
+            self.objects_to_add = OBJECTS
+        elif object_name in OBJECTS:
+            self.objects_to_add = [object_name]
+        else:
+            raise ValueError("Invalid object name. Must be one of the following: {}".format(OBJECTS))
+        
         self.root = root
         self.object_name = object_name
         self.training = training
         self.transforms = input_transform
         self.mask_transforms = mask_transform
         self.target_transforms = target_transform
-
-        # directory of images based on training flag
-        self.data_dir = os.path.join(self.root, self.object_name, self.train_dir if training else self.test_dir)
 
         # get images, masks, and labels
         self.images, self.masks, self.labels = self.load_dataset_folder()
@@ -146,40 +148,39 @@ class MVTecDataset(VisionDataset):
         return mask_path
 
     def load_dataset_folder(self):
-
         images = []
         masks = []
         labels = []
+        for obj in self.objects_to_add:
+            #print("Loading {} images...".format(obj))
+            # directory of images based on training flag
+            self.data_dir = os.path.join(self.root, obj, self.train_dir if self.training else self.test_dir)
+            self.classes =  [d.name for d in os.scandir(self.data_dir) if d.is_dir()]
+            # iterate through each possible class in directory
+            for c in self.classes:
+                img_dir = os.path.join(self.data_dir, c)
+                # find all png files in directory
+                for f in os.scandir(img_dir):
+                    if f.is_file():
+                        if f.name.endswith(".png"):
 
-        self.classes =  [d.name for d in os.scandir(self.data_dir) if d.is_dir()]
+                            # define image, mask, and label
+                            img_pth = os.path.join(img_dir, f.name)
+                            mask_pth = None if c == "good" else self.construct_mask_path(img_pth)
+                            label = 0 if c == "good" else 1
 
-        # iterate through each possible class in directory
-        for c in self.classes:
-            img_dir = os.path.join(self.data_dir, c)
-
-            # find all png files in directory
-            for f in os.scandir(img_dir):
-                if f.is_file():
-                    if f.name.endswith(".png"):
-
-                        # define image, mask, and label
-                        img_pth = os.path.join(img_dir, f.name)
-                        mask_pth = None if c == "good" else self.construct_mask_path(img_pth)
-                        label = 0 if c == "good" else 1
-
-                        # add to lists
-                        images.append(self.load_image(img_pth)) 
-                        masks.append(self.load_image(mask_pth,"L"))
-                        labels.append(label)
-
+                            # add to lists
+                            images.append(self.load_image(img_pth)) 
+                            masks.append(self.load_image(mask_pth,"L"))
+                            labels.append(label)
+                            
         return images, masks, labels
 
 
 if __name__ == '__main__': 
-    """
+    
     # Testing code
-    dataset = MVTecDataset("data", object_name="pill", training=True)
-    print(dataset.classes)
+    dataset = MVTecDataset("./data", training=True)
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=4)
     print("Length of dataloader:", len(dataloader))
@@ -189,4 +190,4 @@ if __name__ == '__main__':
         print(image.shape)
         print(mask.shape)
         print(label)
-    """
+    
