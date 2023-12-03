@@ -84,34 +84,86 @@ def main():
     test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=8, pin_memory=True)
 
     model.eval()
+    ious_per_threshold = {}
     with torch.no_grad():
-        for iter_step, (samples, masks, labels) in enumerate(test_dl):
-            if labels.item() == 0:
-                continue
-            samples = samples.to(device, non_blocking=True) # (B, 3, 224, 224)
+        for threshold in np.arange(0.1, 1.0, 0.1):
+            print(f'Calculating IoUs for threshold: {threshold}')
+            ious_per_threshold[threshold] = []
+            step = 0
+            for _, (samples, masks, labels) in tqdm(enumerate(test_dl), total=len(test_dl)):
+                if labels.item() == 0:
+                    continue
+                samples = samples.to(device, non_blocking=True) # (B, 3, 224, 224)
 
-            loss, pred, mask = model(samples, mask_ratio=0)
+                # Reconstruct 5 times to account for random masking
+                maps = []
+                for i in range(5):
+                    loss, pred, mask = model(samples, mask_ratio=0.75)
 
-            pred = model.unpatchify(pred)
+                    pred = model.unpatchify(pred)
 
-            samples = samples.detach().cpu()
-            pred = pred.detach().cpu()
+                    difference_map = (samples - pred)**2
 
-            # Take the MSE of the reconstruction
-            difference_map = torch.mean((samples - pred)**2, dim=1)
+                    difference_map = torch.sum(difference_map, dim=1)
 
-            # vis
-            fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-            ax[0].imshow(samples[0].permute(1, 2, 0))
-            ax[0].set_title('Original')
-            ax[1].imshow(pred[0].permute(1, 2, 0))
-            ax[1].set_title('Reconstruction')
-            ax[2].imshow(difference_map[0])
-            ax[2].set_title('Difference Map')
-            plt.savefig(f'eval/iter={iter_step}.png')
-            plt.close()
+                    maps.append(difference_map)
+                
+                # Average out the maps
+                difference_map = torch.stack(maps).mean(dim=0)
 
-            if iter_step == 1:
-                break
+                samples = samples.detach().cpu()
+                difference_map = difference_map.detach().cpu()
+
+                # Normalize difference_map to [0, 1]
+                difference_map = (difference_map - difference_map.min()) / (difference_map.max() - difference_map.min())
+
+                # Threshold difference_map to get binary mask
+                difference_map = (difference_map > threshold).float()
+
+                # Calculate IoU
+                intersection = torch.sum(difference_map * masks)
+                union = torch.sum(difference_map) + torch.sum(masks) - intersection
+                iou = intersection / union
+
+                ious_per_threshold[threshold].append(iou)
+
+                # vis every 100 steps
+                if step % 100 == 0:
+                    # Un-normalize the images
+                    samples = samples * torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+                    samples = samples + torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+                    samples = torch.einsum('nchw->nhwc', samples)
+
+                    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+                    ax[0].imshow(samples[0], cmap='gray')
+                    ax[0].set_title('Original')
+                    ax[1].imshow(difference_map.permute(1, 2, 0), cmap='gray')
+                    ax[1].set_title('Difference Map')
+                    ax[2].imshow(masks[0][0], cmap='gray')
+                    ax[2].set_title('Ground Truth')
+
+                    plt.savefig(f'eval/threshold={threshold}_item={step}.png')
+                    plt.close()
+
+                step += 1
+
+            ious_per_threshold[threshold] = np.mean(ious_per_threshold[threshold])
+            print(f'Threshold: {threshold}, IoU: {ious_per_threshold[threshold]}')
+    
+    # Visualize IoU vs threshold and calculate AUC
+    thresholds = list(ious_per_threshold.keys())
+    thresholds.sort()
+    ious = [ious_per_threshold[threshold] for threshold in thresholds]
+    # Calculate AUC
+    auc = np.trapz(ious, thresholds)
+    print(f'AUC: {auc}')
+    plt.plot(thresholds, ious)
+    plt.xlabel('Threshold')
+    plt.ylabel('IoU')
+    plt.title('IoU vs Threshold | AUC: {:.4f}'.format(auc))
+    plt.savefig('eval/iou_vs_threshold.png')
+    plt.close()
+
+
 if __name__ == "__main__":
     main()
