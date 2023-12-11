@@ -133,11 +133,11 @@ class MVTecDataset(VisionDataset):
     def load_image(self, path, mode="RGB"):
         # if path is None, return black image (no anomaly)
         if path ==  None:
-            img = Image.new(mode, (self.image_size, self.image_size))
+            img = transforms.functional.pil_to_tensor(Image.new(mode, (self.image_size, self.image_size)))
             return img
 
         # otherwise, load image and resize
-        img = Image.open(path).convert(mode)
+        img = transforms.functional.pil_to_tensor(Image.open(path).convert(mode))
 
         return img
 
