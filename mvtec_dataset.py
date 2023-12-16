@@ -80,6 +80,7 @@ class MVTecDataset(VisionDataset):
     def __init__(self, 
                  root, 
                  object_name = "all", 
+                 singular = False,
                  training = True,
                  input_transform = None,
                  mask_transform = None,
@@ -97,6 +98,7 @@ class MVTecDataset(VisionDataset):
         
         self.root = root
         self.object_name = object_name
+        self.singular = singular
         self.training = training
         self.transforms = input_transform
         self.mask_transforms = mask_transform
@@ -171,6 +173,10 @@ class MVTecDataset(VisionDataset):
                         images.append(img_pth)
                         masks.append(mask_pth)
                         labels.append(label)
+                        if self.singular:
+                            break
+                if self.singular:
+                    break
                             
         return images, masks, labels
 
