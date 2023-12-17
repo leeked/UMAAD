@@ -6,6 +6,15 @@
 This is the implementation repo of UMAAD: Unsupervised Masked Autoencoder for Anomaly Detection
 
 ## How To Run
+
+### Dependencies
+
+Conda environment files are provided as `environment_linux.yml` and `environment_cross_platform.yml`.
+
+Use the appropriate file based on your OS to install the needed dependencies.
+
+### Pretrained Checkpoint
+
 Note: In order to properly finetune this model, the checkpoint for the ImageNet-pretrained ViT-Large model used in this paper (which is not made available here in this repo) is needed.
 
 You can download the model checkpoint using the following link:
