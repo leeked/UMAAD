@@ -2,6 +2,7 @@ name: base
 channels:
   - pytorch
   - nvidia
+  - anaconda
   - conda-forge
   - defaults
 dependencies:
@@ -14,6 +15,7 @@ dependencies:
   - attrs=23.1.0=pyh71513ae_1
   - backoff=2.2.1=pyhd8ed1ab_0
   - backports=1.0=pyhd8ed1ab_3
+  - backports.cached-property=1.0.2=pyhd8ed1ab_0
   - backports.functools_lru_cache=1.6.5=pyhd8ed1ab_0
   - beautifulsoup4=4.12.2=pyha770c72_0
   - blas=1.0=mkl
@@ -21,6 +23,7 @@ dependencies:
   - boltons=23.0.0=py311h06a4308_0
   - boto3=1.29.3=pyhd8ed1ab_0
   - botocore=1.32.3=pyhd8ed1ab_0
+  - bottleneck=1.3.5=py311hbed6279_0
   - brotli=1.1.0=hd590300_1
   - brotli-bin=1.1.0=hd590300_1
   - brotli-python=1.0.9=py311h6a678d5_7
@@ -28,13 +31,14 @@ dependencies:
   - c-ares=1.19.1=h5eee18b_0
   - ca-certificates=2023.11.17=hbcca054_0
   - cachecontrol=0.12.14=pyhd8ed1ab_0
-  - certifi=2023.11.17=pyhd8ed1ab_0
+  - cachecontrol-with-filecache=0.12.14=pyhd8ed1ab_0
+  - certifi=2023.11.17=py311h06a4308_0
   - cffi=1.15.1=py311h5eee18b_3
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
   - cleo=2.1.0=pyhd8ed1ab_0
   - click=8.1.7=unix_pyh707e725_0
   - colorama=0.4.6=pyhd8ed1ab_0
-  - conda=23.10.0=py311h38be061_1
+  - conda=23.11.0=py311h06a4308_0
   - conda-content-trust=0.2.0=py311h06a4308_0
   - conda-libmamba-solver=23.11.1=py311h06a4308_0
   - conda-package-handling=2.2.0=py311h06a4308_0
@@ -54,12 +58,13 @@ dependencies:
   - dbus=1.13.18=hb2f20db_0
   - deepdiff=6.7.1=pyhd8ed1ab_0
   - distlib=0.3.7=pyhd8ed1ab_0
+  - distro=1.8.0=py311h06a4308_0
   - dulwich=0.21.6=py311h459d7ec_2
   - exceptiongroup=1.1.3=pyhd8ed1ab_0
   - expat=2.5.0=hcb278e6_1
   - fastapi=0.103.2=pyhd8ed1ab_0
   - ffmpeg=4.3=hf484d3e_0
-  - filelock=3.9.0=py311h06a4308_0
+  - filelock=3.13.1=py311h06a4308_0
   - fmt=9.1.0=hdb19cb5_0
   - fontconfig=2.14.1=h4c34cd2_2
   - fonttools=4.45.1=py311h459d7ec_0
@@ -157,6 +162,7 @@ dependencies:
   - matplotlib=3.8.2=py311h38be061_0
   - matplotlib-base=3.8.2=py311h54ef318_0
   - mdurl=0.1.0=pyhd8ed1ab_0
+  - menuinst=2.0.1=py311h06a4308_1
   - mkl=2023.1.0=h213fc3f_46344
   - mkl-service=2.4.0=py311h5eee18b_1
   - mkl_fft=1.3.8=py311h5eee18b_0
@@ -171,6 +177,7 @@ dependencies:
   - ncurses=6.4=h6a678d5_0
   - nettle=3.7.3=hbbd107a_1
   - networkx=3.1=py311h06a4308_0
+  - numexpr=2.8.7=py311h65dcdc2_0
   - numpy=1.26.0=py311h08b1b3b_0
   - numpy-base=1.26.0=py311hf175353_0
   - openh264=2.1.1=h4ff587b_0
@@ -179,6 +186,7 @@ dependencies:
   - ordered-set=4.1.0=pyhd8ed1ab_0
   - orjson=3.9.10=py311h34b1e23_0
   - packaging=23.1=py311h06a4308_0
+  - pandas=2.1.4=py311ha02d727_0
   - pcre=8.45=h9c3ff4c_0
   - pcre2=10.42=hebb0a14_0
   - pexpect=4.8.0=pyh1a96a4e_2
@@ -186,12 +194,12 @@ dependencies:
   - pip=23.3=py311h06a4308_0
   - pkginfo=1.9.6=pyhd8ed1ab_0
   - pkgutil-resolve-name=1.3.10=pyhd8ed1ab_1
-  - platformdirs=2.6.2=pyhd8ed1ab_0
+  - platformdirs=3.10.0=py311h06a4308_0
   - pluggy=1.0.0=py311h06a4308_1
   - ply=3.11=py_1
-  - poetry=1.4.2=linux_pyhd8ed1ab_0
-  - poetry-core=1.5.2=pyhd8ed1ab_0
-  - poetry-plugin-export=1.3.1=pyhd8ed1ab_0
+  - poetry=1.5.1=linux_pyhd8ed1ab_0
+  - poetry-core=1.6.1=pyhd8ed1ab_0
+  - poetry-plugin-export=1.5.0=pyhd8ed1ab_0
   - psutil=5.9.5=py311h459d7ec_1
   - pthread-stubs=0.4=h36c2ea0_1001
   - ptyprocess=0.7.0=pyhd3deb0d_0
@@ -214,6 +222,7 @@ dependencies:
   - python-editor=1.0.4=py_0
   - python-installer=0.7.0=pyhd8ed1ab_0
   - python-multipart=0.0.6=pyhd8ed1ab_0
+  - python-tzdata=2023.3=pyhd3eb1b0_0
   - python_abi=3.11=2_cp311
   - pytorch=2.1.1=py3.11_cuda11.8_cudnn8.7.0_0
   - pytorch-cuda=11.8=h7e8668a_5
@@ -258,12 +267,13 @@ dependencies:
   - trove-classifiers=2023.11.14=pyhd8ed1ab_0
   - truststore=0.8.0=py311h06a4308_0
   - types-python-dateutil=2.8.19.14=pyhd8ed1ab_0
+  - typing=3.10.0.0=py311h06a4308_0
   - typing-extensions=4.7.1=py311h06a4308_0
   - typing_extensions=4.7.1=py311h06a4308_0
   - tzdata=2023c=h04d1e81_0
   - urllib3=1.26.18=py311h06a4308_0
   - uvicorn=0.24.0=py311h38be061_0
-  - virtualenv=20.21.1=pyhd8ed1ab_0
+  - virtualenv=20.25.0=pyhd8ed1ab_0
   - wcwidth=0.2.10=pyhd8ed1ab_0
   - webencodings=0.5.1=pyhd8ed1ab_2
   - websocket-client=1.6.4=pyhd8ed1ab_0
