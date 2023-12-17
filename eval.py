@@ -1,5 +1,3 @@
-# Written with some code borrowed from MAE visualization colab notebook and finetune engine
-
 import sys
 
 sys.path.append('..')
