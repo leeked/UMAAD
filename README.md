@@ -3,6 +3,12 @@
   <img src="./diagrams/model_diagram.png">
 </p>
 
+CS-GY 6953 Deep Learning Fall 2023
+
+Professor Gustavo Sandoval
+
+Authors: Kevin Lee, Kevin Zheng, James Ng
+
 This is the implementation repo of UMAAD: Unsupervised Masked Autoencoder for Anomaly Detection
 
 ## How To Run
