@@ -78,6 +78,6 @@ Examples of image anomaly detection using UMAAD.
 
 ## Attributions
 
-Some of the code present in this repository has been borrowed from the official Masked Autoencoder implementation by Facebook AI Research.
+Some of the code present in this repository has been borrowed and modified from the official Masked Autoencoder implementation by Facebook AI Research.
 
 A link to their license can be found [here](https://github.com/facebookresearch/mae/blob/main/LICENSE).
